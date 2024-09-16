@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -51,9 +52,26 @@ public class JwtService {
                 .compact();
     }
 
-    public Key getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
-        return Keys.hmacShaKeyFor(keyBytes);
+    /**
+     * Determines whether a passed jwt token is valid or not
+     * @param jwtToken string variable containing jwt token to be evaluated
+     * @param userDetails used to confirm that the token passed in belongs to the expected user
+     * @return boolean
+     */
+    public boolean isTokenValid(String jwtToken, UserDetails userDetails) {
+
+        final String username = extractUsername(jwtToken);
+
+        return(username.equals(userDetails.getUsername())) && !isTokenExpired(jwtToken);
+    }
+
+    /**
+     * Determines whether a passed in jwtToken is past its expiration date
+     * @param jwtToken string variable containing jwt token to be evaluated
+     * @return boolean
+     */
+    private boolean isTokenExpired(String jwtToken) {
+        return extractClaim(jwtToken, Claims::getExpiration).before(new Date());
     }
 
     public Claims extractAllClaims(String jwtToken) {
@@ -64,4 +82,10 @@ public class JwtService {
                 .parseClaimsJws(jwtToken)  // decodes hash value reverse algorithm and parse into usable data
                 .getBody(); // return body of jwt
     }
+
+    public Key getSignInKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
+
 }
